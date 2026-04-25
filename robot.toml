@@ -1,0 +1,12 @@
+[robot]
+name = "Piper"
+internal_name = "piper"
+uuid = "019cb287-0bb9-7452-96ea-459a69598003"
+public = true
+urdf_dir = "URDF/Piper"
+
+[docker]
+build_args = []
+dockerfile = "dockerfile"
+context = "."
+image_name = "jowillianto/humanola-test-server"

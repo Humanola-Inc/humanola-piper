@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
+from typing import Dict
+
+from humanola import robo
 
 from battery import PiperBattery
 from controllers import PiperXr
-from humanola import robo
 from piper_native import PiperSetupState, PiperSolver, PiperSolverConfig, PiperState
 from sources import PiperDataSource
 
@@ -13,7 +16,41 @@ def on_error(err: str) -> None:
     logging.error("Robo error: %s", err)
 
 
+@dataclass
+class Camera:
+    id: int
+    desc: robo.CameraDesc
+    cam: "robo.CameraSpec"
+
+
+# def get_height_distance(h: int):
+#     return abs(h - 720)
+
+
+# def is_better(prev: robo.CameraDesc, cur: robo.CameraDesc):
+#     prev_rel_height = get_height_distance(prev.height)
+#     cur_rel_height = get_height_distance(cur.height)
+#     if cur_rel_height > prev_rel_height:
+#         return True
+#     elif (
+#         cur.width == prev.width
+#         and cur.height == prev.height
+#         and cur.frame_rate > prev.frame_rate
+#     ):
+#         return True
+#     return False
+
+
 if __name__ == "__main__":
+    # cameras = robo.list_cameras()
+    # cam_ids: Dict[int, Camera] = {}
+    # for id, spec in cameras:
+    #     desc = spec.desc()
+    #     if id not in cam_ids:
+    #         cam_ids[id] = Camera(id=id, desc=desc, cam=spec)
+    #     elif id in cam_ids and is_better(cam_ids[id].desc, desc):
+    #         cam_ids[id] = Camera(id=id, desc=desc, cam=spec)
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(message)s",
@@ -24,22 +61,14 @@ if __name__ == "__main__":
         right_arm=PiperState.connect("can1"),
         solver=PiperSolver(config=PiperSolverConfig()),
     )
-    channel, runtime = (
-        robo.Robo(
-            url="https://grpc.humanola.com",
-            api_key="I3MObARleuenXMhRo4gATDG5tBrSYk11Su03YWxO",
-            robo_id="019cb288-a9b3-7dc3-9249-d8e7bd936549",
-        )
-        # robo.Robo(
-        #     url="http://192.168.1.119:8001",
-        #     api_key="Fe1J3LXWZafMLEzND0QN0hzKLP452Mij7DMQpDfU",
-        #     robo_id="019c529b-0bab-7db0-af4c-20a87b97cbd1",
-        # )
+    robo = (
+        robo.Robo.new_default()
         .add_controller("controller", PiperXr(state))
         .set_battery(PiperBattery())
         .add_source("data", PiperDataSource(state))
         .auto_discover_cameras()
-        .verbose()
-        .run(on_error)
     )
+    # for id, s in cam_ids.items():
+    #     robo.add_camera(s.desc.name, s.cam)
+    channel, runtime = robo.run(on_error)
     runtime.wait_for_interrupt()

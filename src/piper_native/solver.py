@@ -90,12 +90,6 @@ class PiperSolver:
         self.robot = pin.RobotWrapper.BuildFromURDF(
             str(URDF_PATH), package_dirs=str(MESH_PATH)
         )
-        # self.geom_model = pin.buildGeomFromUrdf(
-        #     self.robot.model,
-        #     str(URDF_PATH),
-        #     pin.GeometryType.COLLISION,
-        #     package_dirs=MESH_PATH,
-        # )
         self.mixed_joints_to_lock_ids = ["joint7", "joint8"]
         self.robot = self.robot.buildReducedRobot(
             list_of_joints_to_lock=self.mixed_joints_to_lock_ids,
@@ -104,26 +98,13 @@ class PiperSolver:
 
         self.ground_height = self.config.ground_height
         self.exclude_from_ground_collision = ["base_link_0"]
-        # self._add_ground_plane()
-        # self._init_collision_pairs()
-
-        self.first_matrix = create_transformation_matrix(0, 0, 0, 0, -1.57, 0)
-        self.second_matrix = create_transformation_matrix(0.13, 0.0, 0.0, 0, 0, 0)
-        self.last_matrix = np.dot(self.first_matrix, self.second_matrix)
-        q = quaternion_from_matrix(self.last_matrix)
         self.gripper_id = self.robot.model.addFrame(
             pin.Frame(
                 "ee",
                 self.robot.model.getJointId("joint6"),
                 pin.SE3(
-                    pin.Quaternion(q[3], q[0], q[1], q[2]),
-                    np.array(
-                        [
-                            self.last_matrix[0, 3],
-                            self.last_matrix[1, 3],
-                            self.last_matrix[2, 3],
-                        ]
-                    ),
+                    np.eye(3),
+                    np.array([0, 0, 0.13]),
                 ),
                 pin.FrameType.OP_FRAME,
             )
@@ -182,29 +163,6 @@ class PiperSolver:
             "print_time": False,
         }
         self.opti.solver("ipopt", opts)
-
-    # def _init_collision_pairs(self) -> None:
-    #     for i in range(4, 9):
-    #         for j in range(0, 3):
-    #             self.geom_model.addCollisionPair(pin.CollisionPair(i, j))
-
-    #     ground_plane_idx = self.geom_model.ngeoms - 1
-    #     for i in range(self.geom_model.ngeoms - 1):
-    #         geom_name = self.geom_model.geometryObjects[i].name
-    #         if geom_name not in self.exclude_from_ground_collision:
-    #             self.geom_model.addCollisionPair(pin.CollisionPair(i, ground_plane_idx))
-
-    # def _add_ground_plane(self) -> None:
-    #     ground_size = [10.0, 10.0, 0.1]
-    #     ground_pose = pin.SE3.Identity()
-    #     ground_pose.translation = np.array([0.0, 0.0, self.ground_height - 0.05])
-    #     ground_geometry = pin.GeometryObject(
-    #         "ground_plane",
-    #         0,
-    #         pin.hppfcl.Box(*ground_size),
-    #         ground_pose,
-    #     )
-    #     self.geom_model.addGeometryObject(ground_geometry)
 
     def inverse(
         self, v: np.ndarray, prev_joints: np.ndarray

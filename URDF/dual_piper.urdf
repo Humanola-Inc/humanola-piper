@@ -92,7 +92,11 @@
     name="base_link_to_base_link_left"
     type="fixed">
     <origin
+<<<<<<< HEAD
       xyz="0 -0.36 0"
+=======
+      xyz="0 0.36 0"
+>>>>>>> 549b4f3d911ab0ed85681e13dc66946447a087c1
       rpy="0 0 0" />
     <parent
       link="base_link" />
@@ -618,7 +622,11 @@
     name="base_link_to_base_link_2"
     type="fixed">
     <origin
+<<<<<<< HEAD
       xyz="0 0.36 0"
+=======
+      xyz="0 -0.36 0"
+>>>>>>> 549b4f3d911ab0ed85681e13dc66946447a087c1
       rpy="0 0 0" />
     <parent
       link="base_link" />

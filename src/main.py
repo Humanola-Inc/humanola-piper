@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from typing import Dict
 
 from humanola import robo
 
@@ -16,41 +14,7 @@ def on_error(err: str) -> None:
     logging.error("Robo error: %s", err)
 
 
-@dataclass
-class Camera:
-    id: int
-    desc: robo.CameraDesc
-    cam: "robo.CameraSpec"
-
-
-# def get_height_distance(h: int):
-#     return abs(h - 720)
-
-
-# def is_better(prev: robo.CameraDesc, cur: robo.CameraDesc):
-#     prev_rel_height = get_height_distance(prev.height)
-#     cur_rel_height = get_height_distance(cur.height)
-#     if cur_rel_height > prev_rel_height:
-#         return True
-#     elif (
-#         cur.width == prev.width
-#         and cur.height == prev.height
-#         and cur.frame_rate > prev.frame_rate
-#     ):
-#         return True
-#     return False
-
-
 if __name__ == "__main__":
-    # cameras = robo.list_cameras()
-    # cam_ids: Dict[int, Camera] = {}
-    # for id, spec in cameras:
-    #     desc = spec.desc()
-    #     if id not in cam_ids:
-    #         cam_ids[id] = Camera(id=id, desc=desc, cam=spec)
-    #     elif id in cam_ids and is_better(cam_ids[id].desc, desc):
-    #         cam_ids[id] = Camera(id=id, desc=desc, cam=spec)
-
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(message)s",
@@ -62,13 +26,27 @@ if __name__ == "__main__":
         solver=PiperSolver(config=PiperSolverConfig()),
     )
     robo = (
-        robo.Robo.new_default()
-        .add_controller("controller", PiperXr(state))
-        .set_battery(PiperBattery())
-        .add_source("data", PiperDataSource(state))
+        robo.Robo(url="https://grpc.humanola.com", api_key="<YOUR_API_KEY>")
+        .attach_controller(
+            robo.LoopDesc(
+                topic="dev:controller",
+                rate=60,
+                name="Piper dual arm controller",
+                desc="Controls two piper arm with meta quest",
+            ),
+            PiperXr(state),
+        )
+        .attach_battery(PiperBattery())
+        .attach_source(
+            robo.LoopDesc(
+                topic="src:data",
+                rate=60,
+                name="Piper dual arm source",
+                desc="Records the joint position of piper arms",
+            ),
+            PiperDataSource(state),
+        )
         .auto_discover_cameras()
     )
-    # for id, s in cam_ids.items():
-    #     robo.add_camera(s.desc.name, s.cam)
     channel, runtime = robo.run(on_error)
     runtime.wait_for_interrupt()

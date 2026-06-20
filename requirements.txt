@@ -1,4 +1,4 @@
 --extra-index-url=https://releases.humanola.com
 numpy
 piper_sdk
-humanola
+humanola==0.1.4

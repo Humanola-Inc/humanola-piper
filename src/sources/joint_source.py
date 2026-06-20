@@ -1,5 +1,4 @@
-from humanola import robo, streaming
-
+from humanola import transport
 from piper_native import PiperSetupState
 
 
@@ -12,17 +11,10 @@ class PiperDataSource:
 
     def src(self):
         snapshot = self.state.snapshot()
-        return streaming.DataFrame.binary(snapshot.proto_encode())
+        return transport.RawPacket(snapshot.proto_encode())
 
     def src_end(self):
         pass
-
-    def desc(self):
-        return robo.LoopDesc(
-            frame_rate=60,
-            name="Piper dual arm source",
-            desc="Records the joint position of piper arms",
-        )
 
     def open(self):
         return self

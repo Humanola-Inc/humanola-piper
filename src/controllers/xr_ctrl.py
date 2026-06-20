@@ -3,7 +3,7 @@ import math
 from typing import List
 
 import numpy as np
-from humanola import controllers, robo
+from humanola import controllers
 from piper_native import (
     ArmState,
     PiperEvent,
@@ -202,13 +202,6 @@ class PiperControllerStream:
 class PiperXr:
     def __init__(self, state: PiperSetupState):
         self.state = state
-
-    def desc(self):
-        return robo.LoopDesc(
-            frame_rate=60,
-            name="Piper dual arm controller",
-            desc="Controls two piper arm with meta quest",
-        )
 
     def open(self):
         return PiperControllerStream(self.state)

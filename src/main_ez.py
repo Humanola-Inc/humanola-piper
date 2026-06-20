@@ -22,33 +22,33 @@ class Camera:
     cam: "robo.CameraSpec"
 
 
-def get_height_distance(h: int):
-    return abs(h - 720)
+# def get_height_distance(h: int):
+#     return abs(h - 720)
 
 
-def is_better(prev: robo.CameraDesc, cur: robo.CameraDesc):
-    prev_rel_height = get_height_distance(prev)
-    cur_rel_height = get_height_distance(cur)
-    if cur_rel_height > prev_rel_height:
-        return True
-    elif (
-        cur.width == prev.width
-        and cur.height == prev.height
-        and cur.frame_rate > prev.frame_rate
-    ):
-        return True
-    return False
+# def is_better(prev: robo.CameraDesc, cur: robo.CameraDesc):
+#     prev_rel_height = get_height_distance(prev.height)
+#     cur_rel_height = get_height_distance(cur.height)
+#     if cur_rel_height > prev_rel_height:
+#         return True
+#     elif (
+#         cur.width == prev.width
+#         and cur.height == prev.height
+#         and cur.frame_rate > prev.frame_rate
+#     ):
+#         return True
+#     return False
 
 
 if __name__ == "__main__":
-    cameras = robo.list_cameras()
-    cam_ids: Dict[int, Camera] = {}
-    for id, spec in cameras:
-        desc = spec.desc()
-        if id not in cam_ids:
-            cam_ids[id] = Camera(id=id, desc=desc, cam=spec)
-        elif id in cam_ids and is_better(cam_ids[id].desc, desc):
-            cam_ids[id] = Camera(id=id, desc=desc, cam=spec)
+    # cameras = robo.list_cameras()
+    # cam_ids: Dict[int, Camera] = {}
+    # for id, spec in cameras:
+    #     desc = spec.desc()
+    #     if id not in cam_ids:
+    #         cam_ids[id] = Camera(id=id, desc=desc, cam=spec)
+    #     elif id in cam_ids and is_better(cam_ids[id].desc, desc):
+    #         cam_ids[id] = Camera(id=id, desc=desc, cam=spec)
 
     logging.basicConfig(
         level=logging.INFO,
@@ -65,8 +65,9 @@ if __name__ == "__main__":
         .add_controller("controller", PiperXr(state))
         .set_battery(PiperBattery())
         .add_source("data", PiperDataSource(state))
+        .auto_discover_cameras()
     )
-    for id, s in cam_ids.items():
-        robo.add_camera(s.desc.name, s.cam)
+    # for id, s in cam_ids.items():
+    #     robo.add_camera(s.desc.name, s.cam)
     channel, runtime = robo.run(on_error)
     runtime.wait_for_interrupt()

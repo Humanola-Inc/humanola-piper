@@ -48,5 +48,5 @@ if __name__ == "__main__":
         )
         .auto_discover_cameras()
     )
-    channel, runtime = robo.run(on_error)
+    channel, runtime = robo.run()
     runtime.wait_for_interrupt()

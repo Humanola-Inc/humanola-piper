@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from humanola import robo
+from humanola import constants, robo
 
 from battery import PiperBattery
 from controllers import PiperXr
@@ -29,7 +29,7 @@ if __name__ == "__main__":
         robo.Robo(url="https://grpc.humanola.com", api_key="<YOUR_API_KEY>")
         .attach_controller(
             robo.LoopDesc(
-                topic="dev:controller",
+                topic=constants.DEV_XR_CONTROLLER,
                 rate=60,
                 name="Piper dual arm controller",
                 desc="Controls two piper arm with meta quest",

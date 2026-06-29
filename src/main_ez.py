@@ -29,7 +29,7 @@ if __name__ == "__main__":
         robo.Robo.new_default()
         .attach_controller(
             robo.LoopDesc(
-                topic="dev:controller",
+                topic=constants.DEV_XR_CONTROLLER,
                 rate=60,
                 name="Piper dual arm controller",
                 desc="Controls two piper arm with meta quest",

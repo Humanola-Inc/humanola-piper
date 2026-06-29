@@ -29,7 +29,7 @@ if __name__ == "__main__":
         robo.Robo(url="https://grpc.humanola.com", api_key="<YOUR_API_KEY>")
         .attach_controller(
             robo.LoopDesc(
-                topic=constants.DEV_XR_CONTROLLER,
+                topic=constants.DEV_XR_CONTROLLER_TOPIC,
                 rate=60,
                 name="Piper dual arm controller",
                 desc="Controls two piper arm with meta quest",

@@ -159,20 +159,38 @@ class PiperSolver:
         )
 
         opts = {
-            "ipopt": {"print_level": 0, "max_iter": 20, "tol": 1e-4},
+            "ipopt": {"print_level": 0, "max_iter": 20, "tol": 1e-2},
             "print_time": False,
+            "jit": True,
+            "compiler": "shell",
+            "jit_options": {
+                "flags": ["-Ofast", "-march=native"],
+                "compiler": "gcc",
+            },
+            "jit_cleanup": True,
+            "expand": True,
         }
         self.opti.solver("ipopt", opts)
+
+        # Bake the whole solve into one reusable, JIT-compiled function:
+        #   (q_init, tf, prev_q) -> q_sol   (var_q doubles as the initial guess)
+        self.solve_fn = self.opti.to_function(
+            "ik",
+            [self.var_q, self.param_tf, self.prev_var_q],
+            [self.var_q],
+            ["q_init", "tf", "prev_q"],
+            ["q_sol"],
+        )
+
+        # Warm-up: triggers JIT compilation now, so the first real call isn't stalled.
+        target = self.forward(np.zeros(6))
+        self.inverse(target, np.zeros(6))
 
     def inverse(
         self, v: np.ndarray, prev_joints: np.ndarray
     ) -> Tuple[float, float, float, float, float, float]:
-        self.opti.set_initial(self.var_q, prev_joints)
-        self.opti.set_value(self.param_tf, v)
-        self.opti.set_value(self.prev_var_q, prev_joints)
-        self.opti.solve()
-        sol_q = self.opti.value(self.var_q)
-        return tuple(float(q) for q in sol_q.tolist())  # type: ignore[return-value]
+        sol_q = self.solve_fn(np.zeros(6), v, prev_joints)
+        return tuple(float(q) for q in np.array(sol_q).flatten())  # type: ignore[return-value]
 
     def forward(self, joints: np.ndarray) -> np.ndarray:
         data = self.robot.model.createData()

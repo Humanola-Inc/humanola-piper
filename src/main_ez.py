@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from humanola import robo
+from humanola import constants, robo
 
 from battery import PiperBattery
 from controllers import PiperXr

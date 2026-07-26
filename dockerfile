@@ -30,7 +30,8 @@ RUN apt update && apt install -y \
   can-utils \
   ethtool \
   iproute2 \
-  kmod
+  kmod \
+  build-essential
 
 ENV PYTHONPATH="/app"
 ENV LD_LIBRARY_PATH="/usr/local/lib"

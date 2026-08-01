@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Tuple
 
 import numpy as np
-from humanola import data
+from humanola import robo
 from piper_sdk import ArmMsgFeedbackStatusEnum
 from piper_sdk import C_PiperInterface as Piper
 
@@ -31,45 +31,50 @@ class PiperSnapshot:
     gripper: int  # milli meters
 
     @staticmethod
-    def create_left_frame(
-        left: PiperSnapshot, frame: data.Frame | None = None
-    ) -> data.Frame:
-        if frame is None:
-            frame = data.Frame.new_with_timestamp(left.timestamp)
-        return (
-            frame.add_entry("joint1", data.Entry.rot(left.joint1))
-            .add_entry("joint2", data.Entry.rot(left.joint2))
-            .add_entry("joint3", data.Entry.rot(left.joint3))
-            .add_entry("joint4", data.Entry.rot(left.joint4))
-            .add_entry("joint5", data.Entry.rot(left.joint5))
-            .add_entry("joint6", data.Entry.rot(left.joint6))
-            .add_entry("joint7", data.Entry.pos(left.gripper // 2))
-            .add_entry("joint8", data.Entry.pos(-left.gripper // 2))
+    def arm_fields(first: int) -> list[robo.Field]:
+        fields = [
+            robo.Field.tensor(f"joint{first + i}", robo.TDType.Angle, 1.0, "mdeg", [1])
+            for i in range(6)
+        ]
+        fields.append(
+            robo.Field.tensor(f"joint{first + 6}", robo.TDType.Length, 1.0, "um", [1])
         )
+        fields.append(
+            robo.Field.tensor(f"joint{first + 7}", robo.TDType.Length, 1.0, "um", [1])
+        )
+        return fields
 
     @staticmethod
-    def create_right_frame(
-        right: PiperSnapshot, frame: data.Frame | None = None
-    ) -> data.Frame:
-        if frame is None:
-            frame = data.Frame.new_with_timestamp(right.timestamp)
-        return (
-            frame.add_entry("joint9", data.Entry.rot(right.joint1))
-            .add_entry("joint10", data.Entry.rot(right.joint2))
-            .add_entry("joint11", data.Entry.rot(right.joint3))
-            .add_entry("joint12", data.Entry.rot(right.joint4))
-            .add_entry("joint13", data.Entry.rot(right.joint5))
-            .add_entry("joint14", data.Entry.rot(right.joint6))
-            .add_entry("joint15", data.Entry.pos(right.gripper // 2))
-            .add_entry("joint16", data.Entry.pos(-right.gripper // 2))
-        )
+    def left_fields() -> list[robo.Field]:
+        return PiperSnapshot.arm_fields(1)
 
     @staticmethod
-    def create_frame(left: PiperSnapshot, right: PiperSnapshot) -> data.Frame:
-        frame = data.Frame.new_with_timestamp((left.timestamp + right.timestamp) // 2)
-        frame = PiperSnapshot.create_left_frame(left, frame)
-        frame = PiperSnapshot.create_right_frame(right, frame)
-        return frame
+    def right_fields() -> list[robo.Field]:
+        return PiperSnapshot.arm_fields(9)
+
+    @staticmethod
+    def add_to_row(snapshot: PiperSnapshot | None, row: robo.Row) -> robo.Row:
+        if snapshot is None:
+            for _ in range(8):
+                row.add([0.0])
+            return row
+        row.add([float(snapshot.joint1)])
+        row.add([float(snapshot.joint2)])
+        row.add([float(snapshot.joint3)])
+        row.add([float(snapshot.joint4)])
+        row.add([float(snapshot.joint5)])
+        row.add([float(snapshot.joint6)])
+        row.add([float(snapshot.gripper // 2)])
+        row.add([float(-snapshot.gripper // 2)])
+        return row
+
+    @staticmethod
+    def create_row(left: PiperSnapshot | None, right: PiperSnapshot | None) -> robo.Row:
+        stamps = [s.timestamp for s in (left, right) if s is not None]
+        row = robo.Row(sum(stamps) // len(stamps)) if stamps else robo.Row()
+        PiperSnapshot.add_to_row(left, row)
+        PiperSnapshot.add_to_row(right, row)
+        return row
 
 
 class PiperState:

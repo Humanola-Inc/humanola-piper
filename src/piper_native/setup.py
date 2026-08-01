@@ -2,7 +2,7 @@ import threading
 from typing import Tuple
 
 import numpy as np
-from humanola import data
+from humanola import robo
 
 from .event import PiperEvent, PiperGrip, PiperMove, PiperReposition, PiperReset
 from .solver import PiperSolver
@@ -33,18 +33,15 @@ class PiperSetupState:
         if self.right_arm is not None:
             self.right_arm.enable_arm()
 
-    def snapshot(self) -> data.Frame:
+    def fields(self) -> list[robo.Field]:
+        return PiperSnapshot.left_fields() + PiperSnapshot.right_fields()
+
+    def snapshot(self) -> robo.Row:
         left_snapshot = self.left_arm.snapshot() if self.left_arm is not None else None
         right_snapshot = (
             self.right_arm.snapshot() if self.right_arm is not None else None
         )
-        if left_snapshot is None or right_snapshot is None:
-            return data.Frame()
-        if left_snapshot is None:
-            return PiperSnapshot.create_right_frame(right_snapshot)
-        if right_snapshot is None:
-            return PiperSnapshot.create_left_frame(left_snapshot)
-        return PiperSnapshot.create_frame(left_snapshot, right_snapshot)
+        return PiperSnapshot.create_row(left_snapshot, right_snapshot)
 
     def handle_event(self, e: PiperEvent, arm_state: Tuple[ArmState, ArmState]):
         state = arm_state[0] if e.hand == "left" else arm_state[1]

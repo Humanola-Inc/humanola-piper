@@ -36,8 +36,6 @@ class PiperControllerStream:
             gripper=0,
             joints=tuple(init_joints),
         )
-
-    def ctrl_beg(self) -> None:
         self.state.enable_arms()
         self.state.apply_arm_state((self.left_state, self.right_state))
 
@@ -196,7 +194,7 @@ class PiperControllerStream:
         for goal in goals:
             self.state.handle_event(goal, (self.left_state, self.right_state))
 
-    def ctrl_end(self) -> None:
+    def __del__(self) -> None:
         self.state.zero_pos()
 
 

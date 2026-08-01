@@ -10,10 +10,6 @@ from piper_native import PiperSetupState, PiperSolver, PiperSolverConfig, PiperS
 from sources import PiperDataSource
 
 
-def on_error(err: str) -> None:
-    logging.error("Robo error: %s", err)
-
-
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
@@ -25,28 +21,27 @@ if __name__ == "__main__":
         right_arm=PiperState.connect("can1"),
         solver=PiperSolver(config=PiperSolverConfig()),
     )
-    robo = (
-        robo.Robo.new_default()
-        .attach_controller(
-            robo.LoopDesc(
-                topic=constants.DEV_XR_CONTROLLER_TOPIC,
-                rate=60,
-                name="Piper dual arm controller",
-                desc="Controls two piper arm with meta quest",
-            ),
-            PiperXr(state),
-        )
-        .attach_battery(PiperBattery())
-        .attach_source(
-            robo.LoopDesc(
-                topic="src:data",
-                rate=60,
-                name="Piper dual arm source",
-                desc="Records the joint position of piper arms",
-            ),
-            PiperDataSource(state),
-        )
-        .auto_discover_cameras()
+    r = robo.Robo.new_default()
+    r.attach_controller(
+        robo.LoopDesc(
+            name="Piper dual arm controller",
+            desc="Controls two piper arm with meta quest",
+            topic=constants.DEV_XR_CONTROLLER_TOPIC,
+            rate=60,
+        ),
+        PiperXr(state),
     )
-    channel, runtime = robo.run(on_error)
+    r.attach_battery(PiperBattery())
+    r.attach_source(
+        robo.LoopDesc(
+            name="Piper dual arm source",
+            desc="Records the joint position of piper arms",
+            topic="src:data",
+            rate=60,
+            fields=state.fields(),
+        ),
+        PiperDataSource(state),
+    )
+    r.auto_discover_cameras()
+    channel, runtime = r.run()
     runtime.wait_for_interrupt()

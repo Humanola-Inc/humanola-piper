@@ -33,14 +33,14 @@ class PiperSnapshot:
     @staticmethod
     def arm_fields(first: int) -> list[robo.Field]:
         fields = [
-            robo.Field.tensor(f"joint{first + i}", robo.TDType.Angle, 1.0, "mdeg", [1])
+            robo.Field.tensor(f"joint{first + i}", robo.TDType.Angle, 1e-3, "mdeg", [1])
             for i in range(6)
         ]
         fields.append(
-            robo.Field.tensor(f"joint{first + 6}", robo.TDType.Length, 1.0, "um", [1])
+            robo.Field.tensor(f"joint{first + 6}", robo.TDType.Length, 1e-3, "mm", [1])
         )
         fields.append(
-            robo.Field.tensor(f"joint{first + 7}", robo.TDType.Length, 1.0, "um", [1])
+            robo.Field.tensor(f"joint{first + 7}", robo.TDType.Length, 1e-3, "mm", [1])
         )
         return fields
 

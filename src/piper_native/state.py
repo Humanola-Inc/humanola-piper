@@ -37,10 +37,10 @@ class PiperSnapshot:
             for i in range(6)
         ]
         fields.append(
-            robo.Field.tensor(f"joint{first + 6}", robo.TDType.Length, 1e-3, "mm", [1])
+            robo.Field.tensor(f"joint{first + 6}", robo.TDType.Length, 1e-6, "um", [1])
         )
         fields.append(
-            robo.Field.tensor(f"joint{first + 7}", robo.TDType.Length, 1e-3, "mm", [1])
+            robo.Field.tensor(f"joint{first + 7}", robo.TDType.Length, 1e-6, "um", [1])
         )
         return fields
 

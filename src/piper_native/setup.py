@@ -2,7 +2,7 @@ import threading
 from typing import Tuple
 
 import numpy as np
-from humanola import robo
+from humanola import dataset, robo
 
 from .event import PiperEvent, PiperGrip, PiperMove, PiperReposition, PiperReset
 from .solver import PiperSolver
@@ -33,10 +33,10 @@ class PiperSetupState:
         if self.right_arm is not None:
             self.right_arm.enable_arm()
 
-    def fields(self) -> list[robo.Field]:
+    def fields(self) -> list[dataset.Field]:
         return PiperSnapshot.left_fields() + PiperSnapshot.right_fields()
 
-    def snapshot(self) -> robo.Row:
+    def snapshot(self) -> robo.DataFrame:
         left_snapshot = self.left_arm.snapshot() if self.left_arm is not None else None
         right_snapshot = (
             self.right_arm.snapshot() if self.right_arm is not None else None

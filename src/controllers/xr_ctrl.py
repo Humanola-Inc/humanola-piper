@@ -3,7 +3,7 @@ import math
 from typing import List
 
 import numpy as np
-from humanola import controllers
+from humanola import robo as controllers
 
 from piper_native import (
     ArmState,
@@ -182,7 +182,7 @@ class PiperControllerStream:
                     )
                 )
 
-    def ctrl(self, prev: "controllers.Device", cur: "controllers.Device") -> None:
+    def recv_delta(self, prev: "controllers.Device", cur: "controllers.Device") -> None:
         goals: List[PiperEvent] = []
         self.emit_move("left", prev, cur, goals)
         self.emit_move("right", prev, cur, goals)

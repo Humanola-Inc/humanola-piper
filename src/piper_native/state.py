@@ -4,10 +4,11 @@ import logging
 import math
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Tuple
 
 import numpy as np
-from humanola import robo
+from humanola import dataset, robo
 from piper_sdk import ArmMsgFeedbackStatusEnum
 from piper_sdk import C_PiperInterface as Piper
 
@@ -31,47 +32,55 @@ class PiperSnapshot:
     gripper: int  # milli meters
 
     @staticmethod
-    def arm_fields(first: int) -> list[robo.Field]:
+    def arm_fields(first: int) -> list[dataset.Field]:
         fields = [
-            robo.Field.tensor(f"joint{first + i}", robo.TDType.Angle, 1e-3, "mdeg", [1])
+            dataset.Field(f"joint{first + i}", dataset.DType.angle(1e-3, "mdeg", [1]))
             for i in range(6)
         ]
         fields.append(
-            robo.Field.tensor(f"joint{first + 6}", robo.TDType.Length, 1e-6, "um", [1])
+            dataset.Field(f"joint{first + 6}", dataset.DType.length(1e-6, "um", [1]))
         )
         fields.append(
-            robo.Field.tensor(f"joint{first + 7}", robo.TDType.Length, 1e-6, "um", [1])
+            dataset.Field(f"joint{first + 7}", dataset.DType.length(1e-6, "um", [1]))
         )
         return fields
 
     @staticmethod
-    def left_fields() -> list[robo.Field]:
+    def left_fields() -> list[dataset.Field]:
         return PiperSnapshot.arm_fields(1)
 
     @staticmethod
-    def right_fields() -> list[robo.Field]:
+    def right_fields() -> list[dataset.Field]:
         return PiperSnapshot.arm_fields(9)
 
     @staticmethod
-    def add_to_row(snapshot: PiperSnapshot | None, row: robo.Row) -> robo.Row:
+    def add_to_row(
+        snapshot: PiperSnapshot | None, row: robo.DataFrame
+    ) -> robo.DataFrame:
         if snapshot is None:
             for _ in range(8):
-                row.add([0.0])
+                row.attach([0.0])
             return row
-        row.add([float(snapshot.joint1)])
-        row.add([float(snapshot.joint2)])
-        row.add([float(snapshot.joint3)])
-        row.add([float(snapshot.joint4)])
-        row.add([float(snapshot.joint5)])
-        row.add([float(snapshot.joint6)])
-        row.add([float(snapshot.gripper // 2)])
-        row.add([float(-snapshot.gripper // 2)])
+        row.attach([float(snapshot.joint1)])
+        row.attach([float(snapshot.joint2)])
+        row.attach([float(snapshot.joint3)])
+        row.attach([float(snapshot.joint4)])
+        row.attach([float(snapshot.joint5)])
+        row.attach([float(snapshot.joint6)])
+        row.attach([float(snapshot.gripper // 2)])
+        row.attach([float(-snapshot.gripper // 2)])
         return row
 
     @staticmethod
-    def create_row(left: PiperSnapshot | None, right: PiperSnapshot | None) -> robo.Row:
+    def create_row(
+        left: PiperSnapshot | None, right: PiperSnapshot | None
+    ) -> robo.DataFrame:
+        row = robo.DataFrame()
         stamps = [s.timestamp for s in (left, right) if s is not None]
-        row = robo.Row(sum(stamps) // len(stamps)) if stamps else robo.Row()
+        if stamps:
+            row.tp_us = datetime.fromtimestamp(
+                sum(stamps) / len(stamps) / 1e6, timezone.utc
+            )
         PiperSnapshot.add_to_row(left, row)
         PiperSnapshot.add_to_row(right, row)
         return row

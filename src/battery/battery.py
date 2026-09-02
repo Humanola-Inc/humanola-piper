@@ -2,9 +2,5 @@ from humanola import robo
 
 
 class PiperBattery:
-    def get_battery_status(self) -> robo.Battery:
-        return (
-            robo.Battery()
-            .add_battery("left", robo.BatteryStatus.plugged_in())
-            .add_battery("right", robo.BatteryStatus.plugged_in())
-        )
+    def get_battery(self) -> robo.Battery:
+        return robo.Battery().attach_plugged_in("left").attach_plugged_in("right")

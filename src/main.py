@@ -9,20 +9,6 @@ from controllers import PiperXr
 from piper_native import PiperSetupState, PiperSolver, PiperSolverConfig, PiperState
 from sources import PiperDataSource
 
-ROBO_ID = "019cb287-0bb9-7452-96ea-459a69598003"
-
-
-def attach_cameras(
-    config: robo.RoboConfig, width: int = 1280, height: int = 720, rate: int = 30
-) -> robo.RoboConfig:
-    for cam_id in range(4):
-        try:
-            config.attach_usb_camera(f"cam:{cam_id}", cam_id, width, height, rate)
-        except RuntimeError:
-            continue
-    return config
-
-
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
@@ -34,8 +20,8 @@ if __name__ == "__main__":
         right_arm=PiperState.connect("can1"),
         solver=PiperSolver(config=PiperSolverConfig()),
     )
-    config = attach_cameras(
-        robo.RoboConfig("https://grpc.humanola.com", "<YOUR_API_KEY>", ROBO_ID)
+    channel, runtime = (
+        robo.RoboConfig("https://grpc.humanola.com", "<YOUR_API_KEY>", "ROBO_ID")
         .attach_device_subscriber(
             constants.DEV_XR_CONTROLLER_TOPIC,
             PiperXr(state),
@@ -52,6 +38,6 @@ if __name__ == "__main__":
             name="Piper dual arm source",
             desc="Records the joint position of piper arms",
         )
+        .run()
     )
-    channel, runtime = config.run()
     runtime.wait_for_interrupt()

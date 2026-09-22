@@ -34,14 +34,25 @@ class PiperSnapshot:
     @staticmethod
     def arm_fields(first: int) -> list[dataset.Field]:
         fields = [
-            dataset.Field(f"joint{first + i}", dataset.DType.angle(1e-3, "mdeg", [1]))
+            dataset.Field(
+                name=f"joint{first + i}",
+                dtype=dataset.AngleType(
+                    unit=dataset.AngleUnit.MILLIDEGREES, shape=[1]
+                ),
+            )
             for i in range(6)
         ]
         fields.append(
-            dataset.Field(f"joint{first + 6}", dataset.DType.length(1e-6, "um", [1]))
+            dataset.Field(
+                name=f"joint{first + 6}",
+                dtype=dataset.LengthType(unit=dataset.LengthUnit.UM, shape=[1]),
+            )
         )
         fields.append(
-            dataset.Field(f"joint{first + 7}", dataset.DType.length(1e-6, "um", [1]))
+            dataset.Field(
+                name=f"joint{first + 7}",
+                dtype=dataset.LengthType(unit=dataset.LengthUnit.UM, shape=[1]),
+            )
         )
         return fields
 
@@ -59,16 +70,16 @@ class PiperSnapshot:
     ) -> robo.DataFrame:
         if snapshot is None:
             for _ in range(8):
-                row.attach([0.0])
+                row.attach(dataset.Num(0.0))
             return row
-        row.attach([float(snapshot.joint1)])
-        row.attach([float(snapshot.joint2)])
-        row.attach([float(snapshot.joint3)])
-        row.attach([float(snapshot.joint4)])
-        row.attach([float(snapshot.joint5)])
-        row.attach([float(snapshot.joint6)])
-        row.attach([float(snapshot.gripper // 2)])
-        row.attach([float(-snapshot.gripper // 2)])
+        row.attach(dataset.Num(float(snapshot.joint1)))
+        row.attach(dataset.Num(float(snapshot.joint2)))
+        row.attach(dataset.Num(float(snapshot.joint3)))
+        row.attach(dataset.Num(float(snapshot.joint4)))
+        row.attach(dataset.Num(float(snapshot.joint5)))
+        row.attach(dataset.Num(float(snapshot.joint6)))
+        row.attach(dataset.Num(float(snapshot.gripper // 2)))
+        row.attach(dataset.Num(float(-snapshot.gripper // 2)))
         return row
 
     @staticmethod

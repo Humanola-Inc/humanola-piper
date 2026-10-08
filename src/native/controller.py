@@ -1,15 +1,20 @@
 import math
+import multiprocessing as mp
 import subprocess
 import threading
 import time
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Optional, Protocol
 
 import numpy as np
 import numpy.typing as npt
 from piper_sdk import C_PiperInterface as Piper
 
 from .state import ArmState
+
+# fork is unsafe once the humanola runtime (grpc) threads are running, which is
+# the case when restarting
+mp_ctx = mp.get_context("spawn")
 
 
 class Arm(Protocol):
@@ -85,7 +90,6 @@ class PiperNotSim:
         self.piper.GripperCtrl(0, 1000, 0x01, 0)
 
     def restart(self):
-        self.close()
         subprocess.run(["ip", "link", "set", self.channel, "down"], check=True)
         subprocess.run(
             [
@@ -135,6 +139,67 @@ class PiperNotSim:
         self.piper.DisconnectPort()
 
 
+@dataclass
+class JointCtrl:
+    joints: npt.NDArray[np.float64]
+    duration: Optional[float]
+
+
+class GetJoint:
+    pass
+
+
+class Close:
+    pass
+
+
+def offshore_controller(
+    channel: str,
+    sim: bool,
+    restart: bool,
+    is_ready,
+    ctrl_rx,
+    joints_rx,
+):
+    # the sdk parses every can frame in python, keeping it in its own process
+    # stops it from starving the ik of the gil
+    arm: Arm = PiperSim(channel) if sim else PiperNotSim(channel)
+    if restart:
+        arm.restart()
+    else:
+        arm.start()
+
+    def joints_loop():
+        while True:
+            ev = joints_rx.recv()
+            if isinstance(ev, Close):
+                break
+            elif isinstance(ev, GetJoint):
+                joints_rx.send(arm.get_joints())
+
+    def ctrl_loop():
+        while True:
+            ev = ctrl_rx.recv()
+            if isinstance(ev, Close):
+                break
+            elif isinstance(ev, JointCtrl):
+                if ev.duration is None:
+                    arm.update(ev.joints)
+                else:
+                    arm.update_over_time(ev.joints, ev.duration)
+
+    joints_thread = threading.Thread(target=joints_loop, daemon=True)
+    ctrl_thread = threading.Thread(target=ctrl_loop, daemon=True)
+    joints_thread.start()
+    ctrl_thread.start()
+    is_ready.set()
+    try:
+        joints_thread.join()
+        ctrl_thread.join()
+    finally:
+        arm.close()
+
+
 class ArmController:
     def __init__(
         self,
@@ -146,31 +211,48 @@ class ArmController:
         self.channel = channel
         self.sim = sim
         self.state = state
-        self.arm: Arm = PiperSim(channel) if sim else PiperNotSim(channel)
-        self.arm.start()
+        self.__start_process()
         if init_state:
             joints = self.get_joints()
             self.state.set_with_joints(joints)
         else:
             self.update()
 
+    def __start_process(self, restart: bool = False):
+        self.is_ready = mp_ctx.Event()
+        ctrl_rx, self.ctrl_tx = mp_ctx.Pipe(duplex=False)
+        self.joints_tx, joints_rx = mp_ctx.Pipe()
+        self.process = mp_ctx.Process(
+            target=offshore_controller,
+            args=(
+                self.channel,
+                self.sim,
+                restart,
+                self.is_ready,
+                ctrl_rx,
+                joints_rx,
+            ),
+        )
+        self.process.start()
+        self.is_ready.wait()
+
     def update(self):
-        self.arm.update(self.state.joints)
+        self.ctrl_tx.send(JointCtrl(self.state.joints, None))
 
     def update_over_time(self, target_joints: npt.NDArray[np.float64], duration: float):
         self.state.set_with_joints(target_joints)
-        self.arm.update_over_time(target_joints, duration)
+        self.ctrl_tx.send(JointCtrl(target_joints, duration))
 
     def get_joints(self) -> npt.NDArray[np.float64]:
-        return self.arm.get_joints()
-
-    def reset_flat(self):
-        self.update_over_time(np.zeros(7), 1)
+        self.joints_tx.send(GetJoint())
+        return self.joints_tx.recv()
 
     def restart(self):
-        self.reset_flat()
-        self.arm.restart()
+        self.close()
+        self.__start_process(restart=True)
 
     def close(self):
-        self.reset_flat()
-        self.arm.close()
+        self.update_over_time(np.zeros(7), 1)
+        self.joints_tx.send(Close())
+        self.ctrl_tx.send(Close())
+        self.process.join()

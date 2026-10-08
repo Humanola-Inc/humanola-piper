@@ -22,7 +22,7 @@ class ArmSolver:
             pin.Frame(
                 "ee",
                 self.model.model.getJointId("joint6"),
-                pin.SE3(np.eye(3), np.array([0, 0, 0.2])),
+                pin.SE3(np.eye(3), np.array([0, 0, 0.13])),
                 pin.FrameType.OP_FRAME,
             )
         )

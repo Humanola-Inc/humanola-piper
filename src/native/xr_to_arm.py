@@ -77,13 +77,13 @@ class Xr2Arm:
         self.arm = arm
         self.config = config
         if init_joints is None:
-            self.init_joints = np.array([0, 45, 90, -45, 0, 0, 0]) * math.pi / 180
+            self.init_joints = np.array([0, 60, -80, 0, 90, 0, 0]) * math.pi / 180
 
     def reset_init(self):
         self.arm.update_over_time(self.init_joints, 1)
 
     def reset_flat(self):
-        self.arm.update_over_time(np.array([0, 1, 1, -1, 1, 1, 0]) * math.pi / 180, 1)
+        self.arm.update_over_time(np.zeros(7), 1)
 
     def open(self):
         self.reset_init()

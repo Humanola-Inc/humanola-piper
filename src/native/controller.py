@@ -165,7 +165,7 @@ class ArmController:
         return self.arm.get_joints()
 
     def reset_flat(self):
-        self.update_over_time(np.array([0, 1, 1, -1, 1, 1, 0]) * math.pi / 180, 1)
+        self.update_over_time(np.zeros(7), 1)
 
     def restart(self):
         self.reset_flat()

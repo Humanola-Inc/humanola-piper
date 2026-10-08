@@ -43,10 +43,10 @@ echo "installing pinocchio and casadi"
 "$CONDA" install -y -n "$ENV_NAME" -c conda-forge pinocchio casadi
 
 echo "installing piper_sdk"
-conda run -n "$ENV_NAME" pip install numpy piper_sdk
+"$CONDA" run -n "$ENV_NAME" pip install numpy piper_sdk
 
 echo "installing humanola"
-conda run -n "$ENV_NAME"  pip install --extra-index-url https://releases.humanola.com/py/ humanola
+"$CONDA"  run -n "$ENV_NAME"  pip install --extra-index-url https://releases.humanola.com/py/ humanola
 
 # CAN
 for iface in "${CAN_IFACES[@]}"; do

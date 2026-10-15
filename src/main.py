@@ -7,27 +7,141 @@ import numpy as np
 from humanola import constants, dataset, robo
 from native import ArmController, ArmSolver, ArmState, Xr2Arm, XrConfig
 
+RUNTIME = None
+
+
+class XrAction:
+    def __init__(self):
+        self.stream = None
+
+    def open(self):
+        self.stream = RUNTIME.get_hub().open_data(
+            topic="src:action",
+            name="Piper Arms Action",
+            desc="Records the joint targets sent to piper arms",
+            to=[robo.Addr.Dataset],
+            fields=[
+                dataset.Field(
+                    name="left_arm.joint1",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint2",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint3",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint4",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint5",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint6",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint7",
+                    dtype=dataset.LengthType(unit=dataset.LengthUnit.M, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint8",
+                    dtype=dataset.LengthType(unit=dataset.LengthUnit.M, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.gripper",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint1",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint2",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint3",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint4",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint5",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint6",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint7",
+                    dtype=dataset.LengthType(unit=dataset.LengthUnit.M, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint8",
+                    dtype=dataset.LengthType(unit=dataset.LengthUnit.M, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.gripper",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+            ],
+        )
+        return self
+
+    def record(self, left_joints, right_joints):
+        frame = robo.DataFrame().update_tp_us()
+        for joint in left_joints[:6]:
+            frame.attach(dataset.Num(joint))
+        left_gripper = left_joints[6]
+        frame.attach(dataset.Num(left_gripper * 0.035))
+        frame.attach(dataset.Num(left_gripper * -0.035))
+        frame.attach(dataset.Num(left_gripper))
+        for joint in right_joints[:6]:
+            frame.attach(dataset.Num(joint))
+        right_gripper = right_joints[6]
+        frame.attach(dataset.Num(right_gripper * 0.035))
+        frame.attach(dataset.Num(right_gripper * -0.035))
+        frame.attach(dataset.Num(right_gripper))
+        self.stream.capture(frame)
+
+    def close_stream(self):
+        self.stream.close()
+        self.stream = None
+
 
 class XrCtrl:
     def __init__(self, left_arm: Xr2Arm, right_arm: Xr2Arm):
         self.arms = [left_arm, right_arm]
+        self.action = XrAction()
 
     def open(self):
+        self.action.open()
         self.pool = ThreadPoolExecutor(max_workers=2)
         self.pool.map(Xr2Arm.open, self.arms)
         return self
 
     def recv_delta(self, prev: robo.Device, cur: robo.Device):
-        self.pool.map(
+        left_joints, right_joints = self.pool.map(
             Xr2Arm.recv_delta,
             self.arms,
             [prev] * len(self.arms),
             [cur] * len(self.arms),
         )
+        self.action.record(left_joints, right_joints)
 
     def close_stream(self):
         self.pool.map(Xr2Arm.close_stream, self.arms)
         self.pool.shutdown()
+        self.action.close_stream()
 
 
 class ArmData:
@@ -57,6 +171,36 @@ class ArmData:
 
     def close_stream(self):
         self.pool.shutdown()
+
+
+class ArmAction:
+    def __init__(self, left_arm: ArmController, right_arm: ArmController):
+        self.left_arm = left_arm
+        self.right_arm = right_arm
+
+    def open(self):
+        return self
+
+    def get_data(self):
+        left_joints = self.left_arm.state.joints
+        right_joints = self.right_arm.state.joints
+        frame = robo.DataFrame()
+        for joint in left_joints[:6]:
+            frame.attach(dataset.Num(joint))
+        left_gripper = left_joints[6]
+        frame.attach(dataset.Num(left_gripper * 0.035))
+        frame.attach(dataset.Num(left_gripper * -0.035))
+        frame.attach(dataset.Num(left_gripper))
+        for joint in right_joints[:6]:
+            frame.attach(dataset.Num(joint))
+        right_gripper = right_joints[6]
+        frame.attach(dataset.Num(right_gripper * 0.035))
+        frame.attach(dataset.Num(right_gripper * -0.035))
+        frame.attach(dataset.Num(right_gripper))
+        return frame
+
+    def close_stream(self):
+        pass
 
 
 class ArmBattery:
@@ -185,8 +329,90 @@ if __name__ == "__main__":
                 ),
             ],
         )
+        .attach_data(
+            topic="src:action2",
+            name="Piper Arms Action 2",
+            desc="Samples the joint targets sent to piper arms at a fixed rate",
+            rate=10,
+            v=ArmAction(left_arm=left_arm, right_arm=right_arm),
+            fields=[
+                dataset.Field(
+                    name="left_arm.joint1",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint2",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint3",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint4",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint5",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint6",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint7",
+                    dtype=dataset.LengthType(unit=dataset.LengthUnit.M, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.joint8",
+                    dtype=dataset.LengthType(unit=dataset.LengthUnit.M, shape=[1]),
+                ),
+                dataset.Field(
+                    name="left_arm.gripper",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint1",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint2",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint3",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint4",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint5",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint6",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint7",
+                    dtype=dataset.LengthType(unit=dataset.LengthUnit.M, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.joint8",
+                    dtype=dataset.LengthType(unit=dataset.LengthUnit.M, shape=[1]),
+                ),
+                dataset.Field(
+                    name="right_arm.gripper",
+                    dtype=dataset.AngleType(unit=dataset.AngleUnit.RAD, shape=[1]),
+                ),
+            ],
+        )
         .run()
     )
+    RUNTIME = runtime
     try:
         runtime.wait_for_interrupt()
     finally:

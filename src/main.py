@@ -114,7 +114,7 @@ class XrAction:
         self.stream.capture(frame)
 
     def close_stream(self):
-        self.stream.close_stream()
+        self.stream.close()
         self.stream = None
 
 

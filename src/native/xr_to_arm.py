@@ -173,13 +173,20 @@ class Xr2Arm:
             return self.arm.state.joints
         cur_lr = cur.get(self.config.arm_lr)
         if cur_lr is not None:
-            cur_x_joy = cur_lr.as_joy().x
-            if abs(cur_x_joy) > 0.2:
+            cur_joy = cur_lr.as_joy()
+            if abs(cur_joy.x) > 0.2:
                 joints = self.arm.state.joints
-                if cur_x_joy > 0:
+                if cur_joy.x > 0:
                     joints[0] -= 1 / 180 * math.pi
                 else:
                     joints[0] += 1 / 180 * math.pi
                 self.arm.state.set_with_joints(joints)
+            if abs(cur_joy.y) > 0.2:
+                pose = self.arm.state.pose.copy()
+                radius = np.linalg.norm(pose[:2, 3])
+                step = -0.005 if cur_joy.y > 0 else 0.005
+                if radius + step > 0.05:
+                    pose[:2, 3] *= (radius + step) / radius
+                    self.arm.state.set_with_pose(pose)
         self.arm.update()
         return self.arm.state.joints

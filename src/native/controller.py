@@ -75,8 +75,8 @@ class PiperNotSim:
     # rad -> 0.001 deg, the unit JointCtrl / GetArmJointMsgs use
     RAD_TO_MDEG = 1000 * 180 / math.pi
     # joints[6] is the gripper opening from 0 (closed) to 1 (open), the sdk wants
-    # micro meters of total opening, 70mm being 2x joint7's upper limit in the urdf
-    GRIPPER_TO_UM = 70_000
+    # micro meters of total opening
+    GRIPPER_TO_UM = 100_000
 
     def __init__(self, channel: str):
         # imported here so --sim runs without the piper sdk installed

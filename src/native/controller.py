@@ -13,6 +13,9 @@ class Arm(Protocol):
     def __init__(self, channel: str):
         pass
 
+    def connect(self):
+        pass
+
     def start(self):
         pass
 
@@ -36,6 +39,9 @@ class PiperSim:
     def __init__(self, channel: str):
         self.channel = channel
         self.joints = np.zeros(7)
+
+    def connect(self):
+        pass
 
     def start(self):
         pass
@@ -76,8 +82,11 @@ class PiperNotSim:
         self.channel = channel
         self.piper = Piper(channel)
 
-    def start(self):
+    def connect(self):
         self.piper.ConnectPort()
+
+    def start(self):
+        self.connect()
         while not all(self.piper.GetArmEnableStatus()[:6]):
             self.piper.EnableArm()
             time.sleep(0.1)

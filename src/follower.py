@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import argparse
-import pathlib
 
 import numpy as np
 from humanola import robo
-from native import ArmController, ArmSolver, ArmState
+from native import Arm, PiperNotSim, PiperSim
 
 LEADER_TOPIC = "dev:piper-leader"
 
@@ -16,8 +15,9 @@ class FollowerCtrl:
         for i in range(6)
     ]
 
-    def __init__(self, arm: ArmController):
+    def __init__(self, arm: Arm):
         self.arm = arm
+        self.joints = arm.get_joints().copy()
 
     def open(self) -> FollowerCtrl:
         return self
@@ -26,10 +26,8 @@ class FollowerCtrl:
         sensors = [cur.get(q) for q in FollowerCtrl.QUERIES]
         if any(s is None for s in sensors):
             return
-        joints = self.arm.state.joints.copy()
-        joints[:6] = [s.as_raw().value for s in sensors]
-        self.arm.state.set_with_joints(joints)
-        self.arm.update()
+        self.joints[:6] = [s.as_raw().value for s in sensors]
+        self.arm.update(self.joints)
 
     def close_stream(self) -> None:
         pass
@@ -40,16 +38,9 @@ if __name__ == "__main__":
     parser.add_argument("--sim", action="store_true")
     parser.add_argument("--channel", default="can0")
     args = parser.parse_args()
-    urdf_path = pathlib.Path(__file__).parent.parent / "URDF/piper.urdf"
 
-    arm = ArmController(
-        args.channel,
-        state=ArmState(
-            joints=np.zeros(7),
-            solver=ArmSolver(urdf_path),
-        ),
-        sim=args.sim,
-    )
+    arm: Arm = PiperSim(args.channel) if args.sim else PiperNotSim(args.channel)
+    arm.start()
 
     channel, runtime = (
         robo.RoboConfig(
@@ -70,4 +61,5 @@ if __name__ == "__main__":
     try:
         runtime.wait_for_interrupt()
     finally:
+        arm.update(np.zeros(7))
         arm.close()

@@ -18,8 +18,10 @@ class LeaderDevice:
     def get_device(self) -> robo.Device:
         device = robo.Device(kind="piper", name="leader")
         device.timestamp_now()
-        for i, joint in enumerate(self.arm.get_joints()[:6]):
+        joints = self.arm.get_joints()
+        for i, joint in enumerate(joints[:6]):
             device.add_reading(f"joint{i + 1}", robo.RawDoubleState(value=float(joint)))
+        device.add_reading("gripper", robo.RawDoubleState(value=float(joints[6])))
         return device
 
     def close_stream(self) -> None:

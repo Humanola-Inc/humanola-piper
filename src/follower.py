@@ -11,13 +11,12 @@ LEADER_TOPIC = "dev:piper-leader"
 
 class FollowerCtrl:
     QUERIES: list[robo.Query] = [
-        robo.Query(kind=robo.SensorKind.RawDouble, name=f"joint{i + 1}")
-        for i in range(6)
+        robo.Query(kind=robo.SensorKind.RawDouble, name=name)
+        for name in [f"joint{i + 1}" for i in range(6)] + ["gripper"]
     ]
 
     def __init__(self, arm: Arm):
         self.arm = arm
-        self.joints = arm.get_joints().copy()
 
     def open(self) -> FollowerCtrl:
         return self
@@ -26,8 +25,7 @@ class FollowerCtrl:
         sensors = [cur.get(q) for q in FollowerCtrl.QUERIES]
         if any(s is None for s in sensors):
             return
-        self.joints[:6] = [s.as_raw().value for s in sensors]
-        self.arm.update(self.joints)
+        self.arm.update(np.array([s.as_raw().value for s in sensors]))
 
     def close_stream(self) -> None:
         pass
